@@ -33,16 +33,26 @@ makeFileButton =
     menuNew >>= \sub -> do
       menuItemSetSubmenu files sub
       menuItemNewWithLabel "Settings" >>= \settings -> do
-        _ <- on settings menuItemActivated $ settingsWindow >>= widgetShow
+        _ <- on settings menuItemActivated $ settingsWindow >>= widgetShowAll
         menuAttach sub settings 0 1 0 1
     return files
 
 settingsWindow :: IO Window
 settingsWindow =
   windowNew >>= \w -> do
-    set w [windowTitle := "Settings"]
-    _ <-
-      on w deleteEvent $ do
-        liftIO $ putStrLn "Settings Close"
-        return False
+    set w [windowTitle := "Settings", windowResizable := False]
+    downloadDirectoryChooser >>= containerAdd w
     return w
+
+downloadDirectoryChooser :: IO HBox
+downloadDirectoryChooser =
+  hBoxNew False 0 >>= \b -> do
+    let pack a = boxPackStart b a PackNatural 0
+    labelNew (Just "Download directory: ") >>= pack
+    fileChooserButtonNew "Download directory" FileChooserActionSelectFolder >>= \fb -> do
+      _ <-
+        on fb fileChooserButtonFileSet $ do
+          fp <- fileChooserGetFilename fb
+          print fp
+      pack fb
+    return b
