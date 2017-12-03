@@ -4,6 +4,7 @@ module HDMWindow
 
 import Control.Monad.IO.Class
 import Graphics.UI.Gtk
+import Settings
 
 makeWindow :: IO Window
 makeWindow =
@@ -36,23 +37,3 @@ makeFileButton =
         _ <- on settings menuItemActivated $ settingsWindow >>= widgetShowAll
         menuAttach sub settings 0 1 0 1
     return files
-
-settingsWindow :: IO Window
-settingsWindow =
-  windowNew >>= \w -> do
-    set w [windowTitle := "Settings", windowResizable := False]
-    downloadDirectoryChooser >>= containerAdd w
-    return w
-
-downloadDirectoryChooser :: IO HBox
-downloadDirectoryChooser =
-  hBoxNew False 0 >>= \b -> do
-    let pack a = boxPackStart b a PackNatural 0
-    labelNew (Just "Download directory: ") >>= pack
-    fileChooserButtonNew "Download directory" FileChooserActionSelectFolder >>= \fb -> do
-      _ <-
-        on fb fileChooserButtonFileSet $ do
-          fp <- fileChooserGetFilename fb
-          print fp
-      pack fb
-    return b
