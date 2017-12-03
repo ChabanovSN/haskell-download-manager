@@ -2,9 +2,13 @@ module Settings
   ( settingsWindow
   ) where
 
+import Control.Exception
+import Control.Monad.IO.Class
+import Data.IORef
 import Data.List.Split
 import Graphics.UI.Gtk
 
+-- TODO: Make this component prettier, improve focus handling
 newtype HDMSettings = HDMSettings
   { downloadDirectory :: String
   } deriving (Show)
@@ -19,30 +23,44 @@ settingsWindow =
       , windowModal := True
       , windowDestroyWithParent := True
       ]
-    downloadDirectoryChooser >>= containerAdd w
+    fromFile <- getSettings "./settings"
+    state <- newIORef fromFile
+    _ <-
+      after w deleteEvent $ do
+        liftIO $ readIORef state >>= \s -> writeSettingsToFile s "./settings"
+        return False
+    downloadDirectoryChooser state >>= containerAdd w
     return w
 
-downloadDirectoryChooser :: IO HBox
-downloadDirectoryChooser =
+downloadDirectoryChooser :: IORef HDMSettings -> IO HBox
+downloadDirectoryChooser state =
   hBoxNew False 0 >>= \b -> do
     let pack a = boxPackStart b a PackNatural 0
     labelNew (Just "Download directory: ") >>= pack
     fileChooserButtonNew "Download directory" FileChooserActionSelectFolder >>= \fb -> do
-      _ <-
-        getSettings "./settings" >>=
-        fileChooserSetFilename fb . downloadDirectory
+      _ <- readIORef state >>= fileChooserSetFilename fb . downloadDirectory
       _ <-
         on fb fileChooserButtonFileSet $
         fileChooserGetFilename fb >>= \fp ->
           case fp of
-            Just path ->
-              writeFile "./settings" $ writeSettings $ HDMSettings path
-            Nothing -> print "nothing"
+            Just path -> do
+              _ <-
+                atomicModifyIORef state $ \_ ->
+                  let r = HDMSettings path
+                  in (r, r)
+              return ()
+            Nothing -> return ()
       pack fb
     return b
 
 getSettings :: String -> IO HDMSettings
-getSettings = fmap toHDMSettings . readFile
+getSettings filePath = do
+  res <- try (readFile filePath) :: IO (Either IOError String)
+  return $
+    toHDMSettings
+      (case res of
+         Left _ -> ""
+         Right path -> path)
 
 toHDMSettings :: String -> HDMSettings
 toHDMSettings a = HDMSettings {downloadDirectory = extract "dir" params}
@@ -57,5 +75,6 @@ toHDMSettings a = HDMSettings {downloadDirectory = extract "dir" params}
       | otherwise = (head l, l !! 1)
     params = [toPair t | t <- [splitOn "::" a]]
 
-writeSettings :: HDMSettings -> String
-writeSettings s = "dir::" ++ downloadDirectory s ++ "\n"
+writeSettingsToFile :: HDMSettings -> FilePath -> IO ()
+writeSettingsToFile settings filePath =
+  writeFile filePath $ "dir::" ++ downloadDirectory settings
