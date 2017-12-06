@@ -3,6 +3,7 @@ module HDMWindow
   ) where
 
 import Control.Monad.IO.Class
+import Download
 import Graphics.UI.Gtk
 import Settings
 
@@ -17,7 +18,15 @@ makeWindow =
           return False
       let pack a = boxPackStart box a PackNatural 0
       makeMenu >>= pack
-      scrolledWindowNew Nothing Nothing >>= pack
+      sWindow <- scrolledWindowNew Nothing Nothing
+      boxPackStart box sWindow PackGrow 0
+      downloadContainer <- vBoxNew False 0
+      containerAdd sWindow downloadContainer
+      mapM_
+        (\dl -> do
+           dl2 <- dl
+           boxPackStart downloadContainer dl2 PackNatural 0)
+        testShow
       containerAdd w box
     return w
 

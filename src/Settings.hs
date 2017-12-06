@@ -7,8 +7,8 @@ import Control.Monad.IO.Class
 import Data.IORef
 import Data.List.Split
 import Graphics.UI.Gtk
-import Graphics.UI.Gtk.General.Enums
 
+-- import Graphics.UI.Gtk.General.Enums
 -- TODO: Make this component prettier, improve focus handling
 newtype HDMSettings = HDMSettings
   { downloadDirectory :: String
@@ -47,7 +47,7 @@ settingsWindow = do
   return w
 
 saveSettings :: IORef HDMSettings -> IO ()
-saveSettings state = readIORef state >>= flip writeSettingsToFile "./settings"
+saveSettings state = readIORef state >>= (`writeSettingsToFile` "./settings")
 
 downloadDirectoryChooser :: IORef HDMSettings -> IO Table
 downloadDirectoryChooser state = do
