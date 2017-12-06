@@ -7,6 +7,7 @@ import Control.Monad.IO.Class
 import Data.IORef
 import Data.List.Split
 import Graphics.UI.Gtk
+import Graphics.UI.Gtk.General.Enums
 
 -- TODO: Make this component prettier, improve focus handling
 newtype HDMSettings = HDMSettings
@@ -14,44 +15,60 @@ newtype HDMSettings = HDMSettings
   } deriving (Show)
 
 settingsWindow :: IO Window
-settingsWindow =
-  windowNew >>= \w -> do
-    set
-      w
-      [ windowTitle := "Settings"
-      , windowResizable := False
-      , windowModal := True
-      , windowDestroyWithParent := True
-      ]
-    fromFile <- getSettings "./settings"
-    state <- newIORef fromFile
-    _ <-
-      after w deleteEvent $ do
-        liftIO $ readIORef state >>= \s -> writeSettingsToFile s "./settings"
-        return False
-    downloadDirectoryChooser state >>= containerAdd w
-    return w
-
-downloadDirectoryChooser :: IORef HDMSettings -> IO HBox
-downloadDirectoryChooser state =
-  hBoxNew False 0 >>= \b -> do
-    let pack a = boxPackStart b a PackNatural 0
-    labelNew (Just "Download directory: ") >>= pack
-    fileChooserButtonNew "Download directory" FileChooserActionSelectFolder >>= \fb -> do
-      _ <- readIORef state >>= fileChooserSetFilename fb . downloadDirectory
+settingsWindow = do
+  w <- windowNew
+  state <- getSettings "./settings" >>= newIORef
+  set
+    w
+    [ windowTitle := "Settings"
+    , windowResizable := False
+    , windowModal := True
+    , windowDestroyWithParent := True
+    ]
+  -- _ <-
+  --   after w deleteEvent $ do
+  --     liftIO $ saveSettings state
+  --     return False
+  vb <- vBoxNew False 16
+  dc <- downloadDirectoryChooser state
+  buttons <-
+    hButtonBoxNew >>= \bBox -> do
+      buttonBoxSetLayout bBox ButtonboxEnd
+      confirm <- buttonNewWithLabel "Confirm"
       _ <-
-        on fb fileChooserButtonFileSet $
-        fileChooserGetFilename fb >>= \fp ->
-          case fp of
-            Just path -> do
-              _ <-
-                atomicModifyIORef state $ \_ ->
-                  let r = HDMSettings path
-                  in (r, r)
-              return ()
-            Nothing -> return ()
-      pack fb
-    return b
+        on confirm buttonActivated $ do
+          liftIO $ saveSettings state
+          return ()
+      boxPackEnd bBox confirm PackNatural 16
+      return bBox
+  boxPackStart vb dc PackNatural 8
+  boxPackEnd vb buttons PackNatural 8
+  containerAdd w vb
+  return w
+
+saveSettings :: IORef HDMSettings -> IO ()
+saveSettings state = readIORef state >>= flip writeSettingsToFile "./settings"
+
+downloadDirectoryChooser :: IORef HDMSettings -> IO Table
+downloadDirectoryChooser state = do
+  t <- tableNew 1 2 False
+  let attach col child = tableAttach t child col (col + 1) 0 1 [] [] 16 16
+  labelNew (Just "Download directory: ") >>= attach 0
+  fb <- fileChooserButtonNew "Download directory" FileChooserActionSelectFolder
+  _ <- readIORef state >>= fileChooserSetFilename fb . downloadDirectory
+  _ <-
+    on fb fileChooserButtonFileSet $
+    fileChooserGetFilename fb >>= \fp ->
+      case fp of
+        Just path -> do
+          _ <-
+            atomicModifyIORef state $ \_ ->
+              let r = HDMSettings path
+              in (r, r)
+          return ()
+        Nothing -> return ()
+  attach 1 fb
+  return t
 
 getSettings :: String -> IO HDMSettings
 getSettings filePath = do
