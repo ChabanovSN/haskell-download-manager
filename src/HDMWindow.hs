@@ -22,11 +22,11 @@ makeWindow =
       boxPackStart box sWindow PackGrow 0
       downloadContainer <- vBoxNew False 0
       containerAdd sWindow downloadContainer
-      mapM_
-        (\dl -> do
-           dl2 <- dl
-           boxPackStart downloadContainer dl2 PackNatural 0)
-        testShow
+      -- mapM_
+      --   (\dl -> do 
+      --      dl2 <- dl
+      --      boxPackStart downloadContainer dl2 PackNatural 0)
+      --   testShow
       containerAdd w box
     return w
 
