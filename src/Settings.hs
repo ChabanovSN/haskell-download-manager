@@ -18,8 +18,7 @@ settingsWindow :: IO Window
 settingsWindow = do
   w <- windowNew
   state <- getSettings "./settings" >>= newIORef
-  set
-    w
+  set w
     [ windowTitle := "Settings"
     , windowResizable := False
     , windowModal := True
@@ -30,7 +29,7 @@ settingsWindow = do
   --     liftIO $ saveSettings state
   --     return False
   vb <- vBoxNew False 16
-  dc <- downloadDirectoryChooser state
+  downloadDirectoryChooser state >>= \dc -> boxPackStart vb dc PackNatural 8
   buttons <-
     hButtonBoxNew >>= \bBox -> do
       buttonBoxSetLayout bBox ButtonboxEnd
@@ -41,7 +40,6 @@ settingsWindow = do
           return ()
       boxPackEnd bBox confirm PackNatural 16
       return bBox
-  boxPackStart vb dc PackNatural 8
   boxPackEnd vb buttons PackNatural 8
   containerAdd w vb
   return w
