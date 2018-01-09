@@ -3,7 +3,7 @@ module HDMWindow
   ) where
 
 import Control.Monad.IO.Class
-import Download
+import DownloadWindow
 import Graphics.UI.Gtk
 import Settings
 
@@ -18,7 +18,12 @@ makeWindow = do
   where
     window = do
       w <- windowNew
-      set w [windowTitle := "Download Manager", windowResizable := True]
+      set
+        w
+        [ windowTitle := "Download Manager"
+        , windowResizable := True
+        , windowDestroyWithParent := True
+        ]
       on w deleteEvent $ do
         liftIO mainQuit
         return False
@@ -28,34 +33,30 @@ makeWindow = do
       vBoxNew False 0 >>= containerAdd w
       return w
 
-makeMenu :: IO MenuBar
+makeMenu :: IO Toolbar
 makeMenu = do
-  m <- menuBarNew
-  makeFileButton >>= menuShellAppend m
-  makeEditButton >>= menuShellAppend m
+  m <- toolbarNew
+  let insert i = flip (toolbarInsert m) i
+  makeFileButton >>= insert 0
+  makeEditButton >>= insert 1
   return m
 
-makeEditButton :: IO MenuItem
-makeEditButton = do
-  edit <- menuItemNewWithLabel "Edit"
-  subMenu >>= menuItemSetSubmenu edit
-  return edit
-  where
-    subMenu = do
-      sub <- menuNew
-      addFile <- menuItemNewWithLabel "New Download"
-      menuAttach sub addFile 0 1 0 1
-      return sub
+makeEditButton :: IO ToolItem
+makeEditButton =
+  toolItemFrom $ makeButton "New Download" $ newDownloadWindow >>= widgetShowAll
 
-makeFileButton :: IO MenuItem
-makeFileButton = do
-  files <- menuItemNewWithLabel "File"
-  subMenu >>= menuItemSetSubmenu files
-  return files
-  where
-    subMenu = do
-      sub <- menuNew
-      settings <- menuItemNewWithLabel "Settings"
-      on settings menuItemActivated $ settingsWindow >>= widgetShowAll
-      menuAttach sub settings 0 1 0 1
-      return sub
+makeFileButton :: IO ToolItem
+makeFileButton =
+  toolItemFrom $ makeButton "Settings" $ settingsWindow >>= widgetShowAll
+
+makeButton :: String -> IO () -> IO Button
+makeButton label action = do
+  b <- buttonNewWithLabel label
+  on b buttonActivated action
+  return b
+
+toolItemFrom :: WidgetClass widget => IO widget -> IO ToolItem
+toolItemFrom child = do
+  item <- toolItemNew
+  child >>= containerAdd item
+  return item

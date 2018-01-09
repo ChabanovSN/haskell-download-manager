@@ -1,15 +1,20 @@
 {-# LANGUAGE MultiWayIf #-}
 
 module DownloadWindow
-  ( streamFromTo
+  ( newDownloadWindow
+  , streamFromTo
   ) where
 
 import Control.Monad
 import qualified Data.ByteString as B
+import Graphics.UI.Gtk
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
 import Network.HTTP.Types.Status (statusCode)
 import System.IO
+
+newDownloadWindow :: IO Window
+newDownloadWindow = windowNew
 
 streamFromTo :: String -> String -> IO Int
 streamFromTo url filePath = do

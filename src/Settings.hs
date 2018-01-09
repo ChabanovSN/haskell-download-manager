@@ -2,13 +2,12 @@ module Settings
   ( settingsWindow
   ) where
 
-import Control.Exception
-import Control.Monad.IO.Class
+import Control.Exception 
 import Data.IORef
 import Data.List.Split
 import Graphics.UI.Gtk
+import System.IO.Error
 
--- import Graphics.UI.Gtk.General.Enums
 -- TODO: Make this component prettier, improve focus handling
 newtype HDMSettings = HDMSettings
   { downloadDirectory :: String
@@ -20,7 +19,7 @@ settingsWindow = do
   state <- getState
   vb <- vBoxNew False 16
   downloadDirectoryChooser state >>= \dc -> boxPackStart vb dc PackNatural 8
-  buttonsBox state >>= \buttons -> boxPackEnd vb buttons PackNatural 8
+  buttonsBox state w >>= \buttons -> boxPackEnd vb buttons PackNatural 8
   containerAdd w vb
   return w
   where
@@ -35,13 +34,13 @@ settingsWindow = do
         ]
       return w
     getState = getSettings "./settings" >>= newIORef
-    buttonsBox state = do
+    buttonsBox state w = do
       bBox <- hButtonBoxNew
       confirm <- buttonNewWithLabel "Confirm"
       _ <-
         on confirm buttonActivated $ do
-          liftIO $ saveSettings state
-          return ()
+          widgetHide w
+          saveSettings state
       boxPackEnd bBox confirm PackNatural 16
       return bBox
 
@@ -57,30 +56,28 @@ downloadDirectoryChooser state = do
   where
     fileButton = do
       fb <-
-        fileChooserButtonNew
-          "Download directory"
-          FileChooserActionSelectFolder
+        fileChooserButtonNew "Download directory" FileChooserActionSelectFolder
       readIORef state >>= fileChooserSetFilename fb . downloadDirectory
-      on fb fileChooserButtonFileSet $
-        fileChooserGetFilename fb >>= \fp -> do
-          atomicModifyIORef state $ \cur ->
-            case fp of
-              Just path ->
-                let r = HDMSettings path
-                in (r, r)
-              _ -> (cur, cur)
-          return ()
+      on fb fileChooserButtonFileSet $ do
+        fp <- fileChooserGetFilename fb
+        atomicModifyIORef' state $ \cur ->
+          let r =
+                case fp of
+                  Just path -> HDMSettings path
+                  _ -> cur
+          in (r, r)
+        return ()
       return fb
-    attach t col child = tableAttach t child col (col + 1) 0 1 [] [] 16 16 
+    attach t col child = tableAttach t child col (col + 1) 0 1 [] [] 16 16
 
 getSettings :: String -> IO HDMSettings
 getSettings filePath = do
   res <- try (readFile filePath) :: IO (Either IOError String)
-  return $
-    toHDMSettings $
-    case res of
-      Left _ -> ""
-      Right path -> path
+  case res of
+    Left err -> do 
+      putStrLn $ "Error retrieving settings: " ++ (ioeGetErrorString err)
+      return $ toHDMSettings "" 
+    Right path -> return $ toHDMSettings path
 
 toHDMSettings :: String -> HDMSettings
 toHDMSettings a = HDMSettings {downloadDirectory = extract "dir" params}

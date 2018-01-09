@@ -27,6 +27,7 @@ executable haskell-download-manager
     http-client,
     http-client-tls,
     http-conduit,
-    http-types
+    http-types,
+    transformers
   hs-source-dirs:      src
   default-language:    Haskell2010
