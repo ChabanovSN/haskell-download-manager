@@ -7,6 +7,8 @@ import Graphics.UI.Gtk
 
 data Download = Download
   { name :: String
+  , link :: String
+  , location :: String
   , size :: Integer
   , completed :: Integer
   } deriving (Show)

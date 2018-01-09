@@ -19,6 +19,14 @@ executable haskell-download-manager
   main-is:             Main.hs
   -- other-modules:       
   -- other-extensions:    
-  build-depends:       base >=4.9 && <4.10, gtk3, split
+  build-depends:
+    base >=4.9 && <4.10,
+    gtk3,
+    split,
+    bytestring,
+    http-client,
+    http-client-tls,
+    http-conduit,
+    http-types
   hs-source-dirs:      src
   default-language:    Haskell2010
