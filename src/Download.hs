@@ -1,8 +1,9 @@
 module Download
   ( showDownload
+  , Download(..)
   ) where
 
-import Data.IORef
+import Data.List
 import Graphics.UI.Gtk
 
 data Download = Download
@@ -30,24 +31,29 @@ addDownloads grid (d:ds) index = do
       (sizeToString . completed $ d) ++ "/" ++ (sizeToString . size $ d)
     progress = fromIntegral (completed d) / fromIntegral (size d)
 
-showDownload :: Download -> IO VBox
+showDownload :: Download -> IO (VBox, Download -> IO ())
 showDownload download = do
   box <- vBoxNew True 16
   labels <- hBoxNew False 16
-  label (name download) >>= \dlName -> boxPackStart labels dlName PackNatural 8
-  label completion >>= \p -> boxPackEnd labels p PackNatural 8
+  nameLabel <- labelNew $ Just $ name download
+  boxPackStart labels nameLabel PackNatural 8
+  completionLabel <- labelNew $ Just $ completion download
+  boxPackEnd labels completionLabel PackNatural 8
   boxPackStart box labels PackNatural 0
   pBar <- progressBarNew
   boxPackStart box pBar PackNatural 0
-  progressBarSetFraction pBar progress
+  progressBarSetFraction pBar $ progress download
   hSeparatorNew >>= \sep -> boxPackEnd box sep PackNatural 0
-  return box
+  return
+    ( box
+    , \newDL -> do
+        labelSetText nameLabel $ name newDL
+        labelSetText completionLabel $ completion newDL
+        progressBarSetFraction pBar $ progress newDL)
   where
-    label = labelNew . Just
-    completion =
-      (sizeToString . completed $ download) ++
-      "/" ++ (sizeToString . size $ download)
-    progress = fromIntegral (completed download) / fromIntegral (size download)
+    completion dl = 
+      sizeToString (completed dl) ++ "/" ++ sizeToString (size dl)
+    progress dl = fromIntegral (completed dl) / fromIntegral (size dl)
 
 sizeToString :: Integer -> String
 sizeToString s =

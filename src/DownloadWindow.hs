@@ -13,8 +13,28 @@ import Network.HTTP.Client.TLS
 import Network.HTTP.Types.Status (statusCode)
 import System.IO
 
-newDownloadWindow :: IO Window
-newDownloadWindow = windowNew
+
+newDownloadWindow :: (String -> IO a) -> IO Window
+newDownloadWindow update = do
+  w <- windowNew
+  set
+    w
+    [ windowTitle := "Settings"
+    , windowResizable := False
+    , windowModal := True
+    , windowDestroyWithParent := True
+    ]
+  txt <- entryNew
+  box <- hBoxNew False 0
+  confirm <- buttonNewWithLabel "Confirm"
+  on confirm buttonActivated $ do
+    entryGetText txt >>= update
+    widgetHide w
+  boxPackStart box txt PackNatural 0
+  boxPackStart box confirm PackNatural 0
+
+  containerAdd w box
+  return w
 
 streamFromTo :: String -> String -> IO Int
 streamFromTo url filePath = do

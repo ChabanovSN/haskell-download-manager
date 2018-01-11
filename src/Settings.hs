@@ -2,7 +2,7 @@ module Settings
   ( settingsWindow
   ) where
 
-import Control.Exception 
+import Control.Exception
 import Data.IORef
 import Data.List.Split
 import Graphics.UI.Gtk
@@ -15,32 +15,27 @@ newtype HDMSettings = HDMSettings
 
 settingsWindow :: IO Window
 settingsWindow = do
-  w <- window
-  state <- getState
+  w <- windowNew
+  set
+    w
+    [ windowTitle := "Settings"
+    , windowResizable := False
+    , windowModal := True
+    , windowDestroyWithParent := True
+    ]
+  state <- getSettings "./settings" >>= newIORef
   vb <- vBoxNew False 16
   downloadDirectoryChooser state >>= \dc -> boxPackStart vb dc PackNatural 8
   buttonsBox state w >>= \buttons -> boxPackEnd vb buttons PackNatural 8
   containerAdd w vb
   return w
   where
-    window = do
-      w <- windowNew
-      set
-        w
-        [ windowTitle := "Settings"
-        , windowResizable := False
-        , windowModal := True
-        , windowDestroyWithParent := True
-        ]
-      return w
-    getState = getSettings "./settings" >>= newIORef
     buttonsBox state w = do
       bBox <- hButtonBoxNew
       confirm <- buttonNewWithLabel "Confirm"
-      _ <-
-        on confirm buttonActivated $ do
-          widgetHide w
-          saveSettings state
+      on confirm buttonActivated $ do
+        widgetHide w
+        saveSettings state
       boxPackEnd bBox confirm PackNatural 16
       return bBox
 
@@ -74,9 +69,9 @@ getSettings :: String -> IO HDMSettings
 getSettings filePath = do
   res <- try (readFile filePath) :: IO (Either IOError String)
   case res of
-    Left err -> do 
+    Left err -> do
       putStrLn $ "Error retrieving settings: " ++ (ioeGetErrorString err)
-      return $ toHDMSettings "" 
+      return $ toHDMSettings ""
     Right path -> return $ toHDMSettings path
 
 toHDMSettings :: String -> HDMSettings
